@@ -49,7 +49,7 @@ This section describes the structure of the final normalized trades  file. This 
 | `timestamp`            | `Utf8`                          | The UTC timestamp of the trade in ISO 8601 format (`YYYY-MM-DDTHH:MM:SS.sssZ`).              |
 | `timestamp_millis_utc` | `Timestamp(millisecond, "UTC")` | The UTC timestamp of the trade as the number of milliseconds since the Unix epoch.         |
 | `sub_ms_idx`           | `UInt8`                         | A 0-based index to preserve the order of trades that occur within the same millisecond.    |
-| `tx_px`                | `Int64`                         | The execution price of the trade. This is a scaled integer.                                |
+| `scaled_tx_px`         | `Int64`                         | The execution price of the trade. This is a scaled integer.                                |
 | `tx_sz`                | `Int64`                         | The size or quantity of the trade.                                                         |
 | `tx_agg_side`          | `Dictionary(Int8, Utf8)`        | The aggressor side of the trade, indicating the initiator. `B` for Buy, `S` for Sell.        |
 | `sym`                  | `Dictionary(Int8, Utf8)`        | The trading symbol for the instrument (e.g., `EURUSD`).                                    |

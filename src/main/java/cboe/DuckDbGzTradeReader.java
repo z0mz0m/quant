@@ -50,9 +50,9 @@ public class DuckDbGzTradeReader {
                         "    utc_timestamp, " +
                         "    utc_timestamp_ms, " +
                         "    (ROW_NUMBER() OVER (PARTITION BY utc_timestamp_ms ORDER BY raw_ts) - 1) as sub_ms_idx, " +
-                        "    side, " +
-                        "    price*1e9 as scaled_price, " +
-                        "    size " +
+                        "    side as tx_agg_side, " +
+                        "    price*1e9 as scaled_tx_px, " +
+                        "    size as tx_sz" +
                         "  FROM TradesWithUTCTimestamp " +
                         "  ORDER BY utc_timestamp_ms, sub_ms_idx" +
                         ") TO '%s' (FORMAT PARQUET, COMPRESSION 'ZSTD')",
