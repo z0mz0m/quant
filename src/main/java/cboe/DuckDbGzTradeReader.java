@@ -33,7 +33,7 @@ public class DuckDbGzTradeReader {
                 "SELECT " +
                         "raw_ts, " +
                         "  CAST(raw_ts AS TIMESTAMP_MS) AS trade_timestamp, " +
-                        "  CAST(raw_ts AS TIME) AS trade_timestamp2, " +
+                        "  epoch_ms(CAST(raw_ts AS TIMESTAMP) AT TIME ZONE 'America/New_York' AT TIME ZONE 'UTC') AS utc_timestamp_ms, " +
                         "  (CAST(raw_ts AS TIMESTAMP) AT TIME ZONE 'America/New_York' AT TIME ZONE 'UTC') AS utc_timestamp, " +
                         "  side, " +
                         "  price, " +
@@ -60,7 +60,7 @@ public class DuckDbGzTradeReader {
                 String rawTimestamp = rs.getString("raw_ts");
                 Timestamp timestamp = rs.getTimestamp("trade_timestamp");
 
-                Time timestamp2 = rs.getTime("trade_timestamp2");
+                Long utcTimestamp_ms = rs.getLong("utc_timestamp_ms");
                 Timestamp utcTimestamp = rs.getTimestamp("utc_timestamp");
 
 
@@ -70,7 +70,7 @@ public class DuckDbGzTradeReader {
                 long size = rs.getLong("size");
                 System.out.printf(
                         "  -> Raw: %s, T1(CAST): %s, T2(): %s,UTC timestamp:%s Side: %s, Price: %.5f, Size: %d%n",
-                        rawTimestamp, timestamp, timestamp2,  utcTimestamp,side, price, size
+                        rawTimestamp, timestamp, utcTimestamp_ms,  utcTimestamp,side, price, size
                 );
 
 
