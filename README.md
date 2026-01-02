@@ -54,3 +54,9 @@ This section describes the structure of the final normalized trades  file. This 
 | `tx_agg_side`          | `Dictionary(Int8, Utf8)`        | The aggressor side of the trade, indicating the initiator. `B` for Buy, `S` for Sell.        |
 | `sym`                  | `Dictionary(Int8, Utf8)`        | The trading symbol for the instrument (e.g., `EURUSD`).                                    |
 | `source`               | `Dictionary(Int8, Utf8)`        | The exchange or venue where the trade occurred (e.g., `EURONEXT`, `CBOE`).                 |
+
+
+
+# JVM parameters
+
+--add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED

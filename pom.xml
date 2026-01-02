@@ -13,6 +13,8 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <duckdb.jdbc.version>1.4.3.0</duckdb.jdbc.version>
+        <arrow.version>18.3.0</arrow.version>
+
     </properties>
 
     <dependencies>
@@ -29,6 +31,28 @@
             <artifactId>duckdb_jdbc</artifactId>
             <version>${duckdb.jdbc.version}</version>
         </dependency>
+
+        <!-- Apache Arrow Dependencies -->
+        <dependency>
+            <groupId>org.apache.arrow</groupId>
+            <artifactId>arrow-vector</artifactId>
+            <version>${arrow.version}</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.apache.arrow</groupId>
+            <artifactId>arrow-memory-netty</artifactId>
+            <version>${arrow.version}</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.apache.arrow/arrow-compression -->
+        <dependency>
+            <groupId>org.apache.arrow</groupId>
+            <artifactId>arrow-compression</artifactId>
+            <version>${arrow.version}</version>
+        </dependency>
+
 
     </dependencies>
 

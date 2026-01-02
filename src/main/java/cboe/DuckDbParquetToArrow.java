@@ -35,7 +35,7 @@ public class DuckDbParquetToArrow {
                 "COPY (" +
                         "  SELECT * EXCLUDE (utc_timestamp) " +
                         "  FROM read_parquet('%s')" +
-                        ") TO '%s' (FORMAT ARROWS, BATCH_SIZE 100)",
+                        ") TO '%s' (FORMAT ARROW)",
                 inputParquetPath.replace("\\", "/"),
                 outputArrowPath.replace("\\", "/")
                 //COPY arrow_libraries TO 'test.arrows' (FORMAT ARROWS, BATCH_SIZE 100);
@@ -50,8 +50,8 @@ public class DuckDbParquetToArrow {
                 Statement stmt = conn.createStatement()
         ) {
             // Install and load the Arrow extension
-            stmt.execute("INSTALL nanoarrow FROM community");
-            stmt.execute("LOAD nanoarrow");
+            stmt.execute("INSTALL arrow FROM community");
+            stmt.execute("LOAD arrow");
 
             stmt.execute(sql);
             System.out.println("Conversion successful.");
@@ -68,7 +68,7 @@ public class DuckDbParquetToArrow {
      */
     public static void main(String[] args) {
         String parquetFile = "data/cboe/normalized/trd_ny_2025-11-24_EURUSD.cboe.trades.parquet";
-        String arrowFile = "data/cboe/normalized/trd_ny_2025-11-24_EURUSD.cboe.trades.arrow";
+        String arrowFile = "data/cboe/normalized/trd_ny_2025-11-24_EURUSD.cboe.trades4.arrow";
 
         // Ensure the output directory exists
         File output = new File(arrowFile);
