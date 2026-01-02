@@ -1,14 +1,22 @@
 package cboe;
 
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * A utility class to read and parse trade data from a gzipped CSV file using DuckDB.
  */
 public class DuckDbGzTradeReader {
+
+    private static final Pattern SYMBOL_PATTERN = Pattern.compile("_([A-Z]+)\\.csv\\.gz$");
+    private static final String SOURCE_NAME = "CBOE";
+
 
     /**
      * Reads trades from a gzipped CSV file, processes them, and saves them as a ZSTD-compressed Parquet file.
@@ -27,16 +35,20 @@ public class DuckDbGzTradeReader {
             return;
         }
 
+        // Extract symbol from the filename
+        Matcher matcher = SYMBOL_PATTERN.matcher(Paths.get(gzFilePath).getFileName().toString());
+        String sym = matcher.find() ? matcher.group(1) : "UNKNOWN";
+
+
         // This SQL query instructs DuckDB to:
         // 1. Read the gzipped CSV and generate timestamps with sub-millisecond indices.
         // 2. Use the COPY statement to save the result directly to a Parquet file.
-        // 3. The output Parquet file will use ZSTD compression.
+        // 3. The output Parquet file will use ZSTD compression and the schema from the SELECT.
         String sql = String.format(
                 "COPY (" +
                         "  WITH TradesWithUTCTimestamp AS ( " +
                         "    SELECT " +
                         "      raw_ts, " +
-                        "      epoch_ms(CAST(raw_ts AS TIMESTAMP) AT TIME ZONE 'America/New_York' AT TIME ZONE 'UTC') AS utc_timestamp_ms, " +
                         "      (CAST(raw_ts AS TIMESTAMP) AT TIME ZONE 'America/New_York' AT TIME ZONE 'UTC') AS utc_timestamp, " +
                         "      side, " +
                         "      price, " +
@@ -47,16 +59,20 @@ public class DuckDbGzTradeReader {
                         "    )" +
                         "  ) " +
                         "  SELECT " +
-                        "    utc_timestamp, " +
-                        "    utc_timestamp_ms, " +
-                        "    (ROW_NUMBER() OVER (PARTITION BY utc_timestamp_ms ORDER BY raw_ts) - 1) as sub_ms_idx, " +
+                        "    strftime(utc_timestamp, '%%Y-%%m-%%dT%%H:%%M:%%S.%%fZ') AS timestamp, " +
+                        "    epoch_ms(utc_timestamp) AS timestamp_millis_utc, " +
+                        "    CAST((ROW_NUMBER() OVER (PARTITION BY utc_timestamp ORDER BY raw_ts) - 1) AS UTINYINT) as sub_ms_idx, " +
+                        "    CAST(price * 1000000000 AS BIGINT) as scaled_tx_px, " +
+                        "    size as tx_sz," +
                         "    side as tx_agg_side, " +
-                        "    price*1e9 as scaled_tx_px, " +
-                        "    size as tx_sz" +
+                        "    '%s' as sym, " +
+                        "    '%s' as source " +
                         "  FROM TradesWithUTCTimestamp " +
-                        "  ORDER BY utc_timestamp_ms, sub_ms_idx" +
+                        "  ORDER BY timestamp_millis_utc, sub_ms_idx" +
                         ") TO '%s' (FORMAT PARQUET, COMPRESSION 'ZSTD')",
                 gzFilePath.replace("\\", "/"),
+                sym,
+                SOURCE_NAME,
                 outputParquetPath.replace("\\", "/")
         );
 
