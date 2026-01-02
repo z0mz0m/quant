@@ -25,24 +25,36 @@ public class DuckDbGzTradeReader {
         }
 
         // This SQL query instructs DuckDB to:
-        // 1. Read the gzipped CSV file directly from disk.
-        // 2. Read the timestamp column as a plain string ('VARCHAR').
-        // 3. Use the CAST function to reliably convert the string into a proper TIMESTAMP.
-        //    DuckDB's CAST is smart and correctly interprets '.325' as 325 milliseconds.
+        // 1. Define a Common Table Expression (CTE) to first parse the timestamps.
+        // 2. Use the ROW_NUMBER() window function to generate a sub-millisecond index.
+        //    - It partitions the data by millisecond (`utc_timestamp_ms`).
+        //    - It orders by the raw timestamp string to preserve the original file order.
+        //    - Subtracts 1 to make the index 0-based.
         String sql = String.format(
-                "SELECT " +
-                        "raw_ts, " +
-                        "  CAST(raw_ts AS TIMESTAMP_MS) AS trade_timestamp, " +
-                        "  epoch_ms(CAST(raw_ts AS TIMESTAMP) AT TIME ZONE 'America/New_York' AT TIME ZONE 'UTC') AS utc_timestamp_ms, " +
-                        "  (CAST(raw_ts AS TIMESTAMP) AT TIME ZONE 'America/New_York' AT TIME ZONE 'UTC') AS utc_timestamp, " +
+                "WITH TradesWithUTCTimestamp AS ( " +
+                        "  SELECT " +
+                        "    raw_ts, " +
+                        "    epoch_ms(CAST(raw_ts AS TIMESTAMP) AT TIME ZONE 'America/New_York' AT TIME ZONE 'UTC') AS utc_timestamp_ms, " +
+                        "    (CAST(raw_ts AS TIMESTAMP) AT TIME ZONE 'America/New_York' AT TIME ZONE 'UTC') AS utc_timestamp, " +
+                        "    side, " +
+                        "    price, " +
+                        "    size " +
+                        "  FROM read_csv_auto('%s', " +
+                        "    header=false, " +
+                        "    columns={'raw_ts': 'VARCHAR', 'side': 'VARCHAR', 'price': 'DOUBLE', 'size': 'BIGINT'}" +
+                        "  )" +
+                        ") " +
+                        "SELECT " +
+                        "  raw_ts, " +
+                        "  utc_timestamp, " +
+                        "  utc_timestamp_ms, " +
+                        "  (ROW_NUMBER() OVER (PARTITION BY utc_timestamp_ms ORDER BY raw_ts) - 1) as sub_ms_idx, " +
                         "  side, " +
                         "  price, " +
                         "  size " +
-                        "FROM read_csv_auto('%s', " +
-                        "  header=false, " +
-                        "  columns={'raw_ts': 'VARCHAR', 'side': 'VARCHAR', 'price': 'DOUBLE', 'size': 'BIGINT'}" +
-                        ") " +
-                        "LIMIT 20", // Limit results for a clean demonstration
+                        "FROM TradesWithUTCTimestamp " +
+                        "ORDER BY utc_timestamp_ms, sub_ms_idx " + // Order by the new index
+                        "LIMIT 20",
                 gzFilePath.replace("\\", "/") // Ensure forward slashes for the path
         );
 
@@ -58,19 +70,15 @@ public class DuckDbGzTradeReader {
             while (rs.next()) {
 
                 String rawTimestamp = rs.getString("raw_ts");
-                Timestamp timestamp = rs.getTimestamp("trade_timestamp");
-
-                Long utcTimestamp_ms = rs.getLong("utc_timestamp_ms");
+                long utcTimestamp_ms = rs.getLong("utc_timestamp_ms");
                 Timestamp utcTimestamp = rs.getTimestamp("utc_timestamp");
-
-
-
+                int subMsIdx = rs.getInt("sub_ms_idx");
                 String side = rs.getString("side");
                 double price = rs.getDouble("price");
                 long size = rs.getLong("size");
                 System.out.printf(
-                        "  -> Raw: %s, T1(CAST): %s, T2(): %s,UTC timestamp:%s Side: %s, Price: %.5f, Size: %d%n",
-                        rawTimestamp, timestamp, utcTimestamp_ms,  utcTimestamp,side, price, size
+                        "  -> Raw: %s, UTC: %s, UTC ms: %d, SubMS: %d, Side: %s, Price: %.5f, Size: %d%n",
+                        rawTimestamp, utcTimestamp, utcTimestamp_ms, subMsIdx, side, price, size
                 );
 
 
