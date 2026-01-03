@@ -60,3 +60,10 @@ This section describes the structure of the final normalized trades  file. This 
 # JVM parameters
 
 --add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED
+
+# Note on nanoarrow /arrow community extension for duckdb 
+
+https://github.com/paleolimbot/duckdb-nanoarrow?tab=readme-ov-file
+
+Arrow IPC files (.arrow) and Arrow IPC streams (.arrows) are distinct but related formats. This extension can read both but only writes Arrow IPC Streams.
+
