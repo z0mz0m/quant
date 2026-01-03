@@ -69,7 +69,7 @@ public class DuckDbGzTradeReader {
                         "    '%s' as source " +
                         "  FROM TradesWithUTCTimestamp " +
                         "  ORDER BY timestamp_millis_utc, sub_ms_idx" +
-                        ") TO '%s' (FORMAT PARQUET, COMPRESSION 'ZSTD')",
+                        ") TO '%s' (FORMAT PARQUET, COMPRESSION 'ZSTD',  COMPRESSION_LEVEL 9)",
                 gzFilePath.replace("\\", "/"),
                 sym,
                 SOURCE_NAME,
