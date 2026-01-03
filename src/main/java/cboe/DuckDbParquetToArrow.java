@@ -67,8 +67,8 @@ public class DuckDbParquetToArrow {
      * Main method to demonstrate the reader function.
      */
     public static void main(String[] args) {
-        String parquetFile = "data/cboe/normalized/trd_ny_2025-11-24_EURUSD.cboe.trades.parquet";
-        String arrowFile = "data/cboe/normalized/trd_ny_2025-11-24_EURUSD.cboe.trades4.arrows";
+        String parquetFile = "data/cboe/normalized/EURUSD.cboe.ny.trades.parquet";
+        String arrowFile = "data/cboe/normalized/EURUSD.cboe.ny.trades.arrows";
 
         // Ensure the output directory exists
         File output = new File(arrowFile);

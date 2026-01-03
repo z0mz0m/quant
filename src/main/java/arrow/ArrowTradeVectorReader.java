@@ -1,5 +1,7 @@
 package arrow;
 
+import jdk.incubator.vector.LongVector;
+import jdk.incubator.vector.VectorSpecies;
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
@@ -16,20 +18,22 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * A utility class to read and analyze trade data from an Arrow file.
+ * A utility class to read and analyze trade data from an Arrow file using the Java Vector API for calculations.
+ * NOTE: This class uses an incubator feature. The code must be compiled and run with:
+ * --add-modules jdk.incubator.vector
  */
-public class ArrowTradeReader {
+public class ArrowTradeVectorReader {
 
     private static final byte[] ARROW_MAGIC = "ARROW1".getBytes(StandardCharsets.US_ASCII);
+    private static final VectorSpecies<Long> SPECIES = LongVector.SPECIES_PREFERRED;
 
     /**
-     * Analyzes an Arrow file to calculate the CDF of inter-trade arrival times.
+     * Analyzes an Arrow file to calculate the CDF of inter-trade arrival times using the Vector API.
      *
      * @param arrowFilePath The path to the Arrow file.
      */
     public static void analyzeTrades(String arrowFilePath) {
         long startTime = System.nanoTime(); // Start the timer
-
 
         File arrowFile = new File(arrowFilePath);
         if (!arrowFile.exists()) {
@@ -49,25 +53,55 @@ public class ArrowTradeReader {
             VectorSchemaRoot root = reader.getVectorSchemaRoot();
             System.out.println("Schema: " + root.getSchema());
             System.out.println("-----------------------------------------");
-            System.out.println("Calculating inter-trade arrival times...");
+            System.out.println("Calculating inter-trade arrival times using Vector API...");
 
             List<Long> arrivalTimeDeltas = new ArrayList<>();
             long lastTimestamp = -1;
             long totalTrades = 0;
 
+            long[] deltaChunk = new long[SPECIES.length()];
+
             while (reader.loadNextBatch()) {
                 int batchSize = root.getRowCount();
+                if (batchSize == 0) continue;
+
                 System.out.printf("Loaded batch of %d trades.%n", batchSize);
                 BigIntVector timestampVector = (BigIntVector) root.getVector("timestamp_millis_utc");
 
+                // Copy data from Arrow vector to a primitive array to use with the Vector API.
+                // This copy introduces some overhead.
+                long[] batchTimestamps = new long[batchSize];
                 for (int i = 0; i < batchSize; i++) {
-                    long currentTimestamp = timestampVector.get(i);
-                    if (lastTimestamp != -1) {
-                        long delta = currentTimestamp - lastTimestamp;
-                        arrivalTimeDeltas.add(delta);
-                    }
-                    lastTimestamp = currentTimestamp;
+                    batchTimestamps[i] = timestampVector.get(i);
                 }
+
+                // Handle the delta between the last trade of the previous batch and the first of this one.
+                if (lastTimestamp != -1) {
+                    arrivalTimeDeltas.add(batchTimestamps[0] - lastTimestamp);
+                }
+
+                // Calculate deltas within the current batch: timestamp[i] - timestamp[i-1]
+                int i = 1;
+                int loopBound = SPECIES.loopBound(batchSize);
+
+                // Vectorized loop to compute deltas in chunks
+                for (; i < loopBound; i += SPECIES.length()) {
+                    LongVector current = LongVector.fromArray(SPECIES, batchTimestamps, i);
+                    LongVector previous = LongVector.fromArray(SPECIES, batchTimestamps, i - 1);
+                    LongVector delta = current.sub(previous);
+                    delta.intoArray(deltaChunk, 0);
+                    for (long d : deltaChunk) {
+                        arrivalTimeDeltas.add(d);
+                    }
+                }
+
+                // Scalar cleanup for the remainder of the batch
+                for (; i < batchSize; i++) {
+                    long delta = batchTimestamps[i] - batchTimestamps[i - 1];
+                    arrivalTimeDeltas.add(delta);
+                }
+
+                lastTimestamp = batchTimestamps[batchSize - 1];
                 totalTrades += batchSize;
             }
 
@@ -85,12 +119,10 @@ public class ArrowTradeReader {
             long endTime = System.nanoTime(); // End the timer after computation
             double durationMillis = (endTime - startTime) / 1_000_000.0;
 
-
             printCdfSummary(arrivalTimeDeltas);
 
             System.out.printf("Total time to read and compute CDF: %.3f milliseconds%n", durationMillis);
             System.out.println("-----------------------------------------");
-
 
         } catch (IOException e) {
             System.err.println("An error occurred while reading the Arrow file.");
@@ -107,7 +139,6 @@ public class ArrowTradeReader {
         System.out.println("Analysis Results: Inter-Trade Arrival Time CDF");
         System.out.printf("Total calculated time differences: %,d%n", sortedDeltas.size());
 
-        // Define the percentiles we want to calculate
         double[] percentiles = {0.25, 0.50, 0.75, 0.90, 0.95, 0.99, 0.999, 1.00};
 
         System.out.println("Percentiles (time in milliseconds):");

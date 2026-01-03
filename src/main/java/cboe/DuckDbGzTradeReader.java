@@ -36,8 +36,8 @@ public class DuckDbGzTradeReader {
         }
 
         // Extract symbol from the filename
-        Matcher matcher = SYMBOL_PATTERN.matcher(Paths.get(gzFilePath).getFileName().toString());
-        String sym = matcher.find() ? matcher.group(1) : "UNKNOWN";
+        //Matcher matcher = SYMBOL_PATTERN.matcher(Paths.get(gzFilePath).getFileName().toString());
+        String sym = "EURUSD";
 
 
         // This SQL query instructs DuckDB to:
@@ -70,7 +70,7 @@ public class DuckDbGzTradeReader {
                         "  FROM TradesWithUTCTimestamp " +
                         "  ORDER BY timestamp_millis_utc, sub_ms_idx" +
                         ") TO '%s' (FORMAT PARQUET, COMPRESSION 'ZSTD',  COMPRESSION_LEVEL 9)",
-                gzFilePath.replace("\\", "/"),
+                gzFilePath,
                 sym,
                 SOURCE_NAME,
                 outputParquetPath.replace("\\", "/")
@@ -98,15 +98,16 @@ public class DuckDbGzTradeReader {
      * Main method to demonstrate the reader function.
      */
     public static void main(String[] args) {
-        String inputFile = "data/cboe/trades/ny/trd_ny_2025-11-24_EURUSD.csv.gz";
-        String outputFile = "data/cboe/normalized/trd_ny_2025-11-24_EURUSD.cboe.trades.parquet";
+        String inDirPath = "data/cboe/trades/ny/";
+        String outputFile = "data/cboe/normalized/EURUSD.cboe.ny.trades.parquet";
 
+        String inputGlobPath = new File(inDirPath, "*.csv.gz").getPath().replace('\\', '/');
         // Ensure the output directory exists
         File output = new File(outputFile);
         if (output.getParentFile() != null) {
             output.getParentFile().mkdirs();
         }
 
-        convertAndSaveAsParquet(inputFile, outputFile);
+        convertAndSaveAsParquet(inputGlobPath, outputFile);
     }
 }
