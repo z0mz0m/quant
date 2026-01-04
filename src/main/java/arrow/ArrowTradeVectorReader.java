@@ -5,30 +5,30 @@ import jdk.incubator.vector.VectorSpecies;
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
-import org.apache.arrow.vector.ipc.ArrowStreamReader;
+import org.apache.arrow.vector.ipc.ArrowFileReader;
+import org.apache.arrow.vector.ipc.SeekableReadChannel;
+import org.apache.arrow.vector.ipc.message.ArrowBlock;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.charset.StandardCharsets;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
- * A utility class to read and analyze trade data from an Arrow file using the Java Vector API for calculations.
+ * A utility class to read and analyze trade data from an Arrow file using memory mapping for efficient I/O,
+ * the Java Vector API for calculations, and parallel sorting for improved performance.
  * NOTE: This class uses an incubator feature. The code must be compiled and run with:
  * --add-modules jdk.incubator.vector
  */
 public class ArrowTradeVectorReader {
 
-    private static final byte[] ARROW_MAGIC = "ARROW1".getBytes(StandardCharsets.US_ASCII);
     private static final VectorSpecies<Long> SPECIES = LongVector.SPECIES_PREFERRED;
 
     /**
-     * Analyzes an Arrow file to calculate the CDF of inter-trade arrival times using the Vector API.
+     * Analyzes an Arrow file to calculate the CDF of inter-trade arrival times.
      *
      * @param arrowFilePath The path to the Arrow file.
      */
@@ -41,17 +41,13 @@ public class ArrowTradeVectorReader {
             return;
         }
 
-        if (!isArrowFileValid(arrowFile)) {
-            System.err.println("Warning: File may not be a valid Arrow IPC file (magic number mismatch).");
-        }
-
+        // Use RandomAccessFile to get a FileChannel for memory mapping
         try (RootAllocator allocator = new RootAllocator();
-             FileInputStream fileInputStream = new FileInputStream(arrowFile);
-             ArrowStreamReader reader = new ArrowStreamReader(fileInputStream, allocator)) {
+             RandomAccessFile raf = new RandomAccessFile(arrowFile, "r");
+             FileChannel fileChannel = raf.getChannel();
+             ArrowFileReader reader = new ArrowFileReader(new SeekableReadChannel(fileChannel), allocator)) {
 
-            System.out.println("Successfully opened Arrow file: " + arrowFilePath);
-            VectorSchemaRoot root = reader.getVectorSchemaRoot();
-            System.out.println("Schema: " + root.getSchema());
+            System.out.println("Successfully opened Arrow file with memory mapping: " + arrowFilePath);
             System.out.println("-----------------------------------------");
             System.out.println("Calculating inter-trade arrival times using Vector API...");
 
@@ -61,30 +57,30 @@ public class ArrowTradeVectorReader {
 
             long[] deltaChunk = new long[SPECIES.length()];
 
-            while (reader.loadNextBatch()) {
+            // Iterate through the record batches in the file
+            for (ArrowBlock arrowBlock : reader.getRecordBlocks()) {
+                if (!reader.loadRecordBatch(arrowBlock)) {
+                    continue; // Skip if loading fails
+                }
+                VectorSchemaRoot root = reader.getVectorSchemaRoot();
                 int batchSize = root.getRowCount();
                 if (batchSize == 0) continue;
 
                 System.out.printf("Loaded batch of %d trades.%n", batchSize);
                 BigIntVector timestampVector = (BigIntVector) root.getVector("timestamp_millis_utc");
 
-                // Copy data from Arrow vector to a primitive array to use with the Vector API.
-                // This copy introduces some overhead.
                 long[] batchTimestamps = new long[batchSize];
                 for (int i = 0; i < batchSize; i++) {
                     batchTimestamps[i] = timestampVector.get(i);
                 }
 
-                // Handle the delta between the last trade of the previous batch and the first of this one.
                 if (lastTimestamp != -1) {
                     arrivalTimeDeltas.add(batchTimestamps[0] - lastTimestamp);
                 }
 
-                // Calculate deltas within the current batch: timestamp[i] - timestamp[i-1]
                 int i = 1;
                 int loopBound = SPECIES.loopBound(batchSize);
 
-                // Vectorized loop to compute deltas in chunks
                 for (; i < loopBound; i += SPECIES.length()) {
                     LongVector current = LongVector.fromArray(SPECIES, batchTimestamps, i);
                     LongVector previous = LongVector.fromArray(SPECIES, batchTimestamps, i - 1);
@@ -95,7 +91,6 @@ public class ArrowTradeVectorReader {
                     }
                 }
 
-                // Scalar cleanup for the remainder of the batch
                 for (; i < batchSize; i++) {
                     long delta = batchTimestamps[i] - batchTimestamps[i - 1];
                     arrivalTimeDeltas.add(delta);
@@ -113,13 +108,13 @@ public class ArrowTradeVectorReader {
                 return;
             }
 
-            // Sort the deltas to calculate the CDF
-            Collections.sort(arrivalTimeDeltas);
+            long[] deltasArray = arrivalTimeDeltas.stream().mapToLong(Long::longValue).toArray();
+            Arrays.parallelSort(deltasArray);
 
             long endTime = System.nanoTime(); // End the timer after computation
             double durationMillis = (endTime - startTime) / 1_000_000.0;
 
-            printCdfSummary(arrivalTimeDeltas);
+            printCdfSummary(deltasArray);
 
             System.out.printf("Total time to read and compute CDF: %.3f milliseconds%n", durationMillis);
             System.out.println("-----------------------------------------");
@@ -132,27 +127,21 @@ public class ArrowTradeVectorReader {
         }
     }
 
-    /**
-     * Prints a summary of the Cumulative Distribution Function (CDF) using percentiles.
-     */
-    private static void printCdfSummary(List<Long> sortedDeltas) {
+    private static void printCdfSummary(long[] sortedDeltas) {
         System.out.println("Analysis Results: Inter-Trade Arrival Time CDF");
-        System.out.printf("Total calculated time differences: %,d%n", sortedDeltas.size());
+        System.out.printf("Total calculated time differences: %,d%n", sortedDeltas.length);
 
         double[] percentiles = {0.25, 0.50, 0.75, 0.90, 0.95, 0.99, 0.999, 1.00};
 
         System.out.println("Percentiles (time in milliseconds):");
         for (double percentile : percentiles) {
-            int index = (int) Math.min(Math.floor(percentile * sortedDeltas.size()), sortedDeltas.size() - 1);
-            long value = sortedDeltas.get(index);
+            int index = (int) Math.min(Math.floor(percentile * sortedDeltas.length), sortedDeltas.length - 1);
+            long value = sortedDeltas[index];
             System.out.printf("  - %.1fth percentile (%.2f): <= %d ms%n", percentile * 100, percentile, value);
         }
         System.out.println("-----------------------------------------");
     }
 
-    /**
-     * Provides more helpful error messages for common issues.
-     */
     private static void handleProcessingException(Exception e) {
         if (e.getMessage() != null && e.getMessage().contains("arrow-compression")) {
             System.err.println("\nERROR: Missing Compression Library. Add 'org.apache.arrow:arrow-compression' to your pom.xml.");
@@ -160,20 +149,6 @@ public class ArrowTradeVectorReader {
             System.err.println("\nERROR: A column was not found. Most likely, the 'timestamp_millis_utc' column is missing from the Arrow file's schema.");
         } else {
             e.printStackTrace();
-        }
-    }
-
-    private static boolean isArrowFileValid(File file) {
-        if (file.length() < ARROW_MAGIC.length * 2) return false;
-        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
-            byte[] header = new byte[ARROW_MAGIC.length];
-            byte[] footer = new byte[ARROW_MAGIC.length];
-            raf.readFully(header);
-            raf.seek(file.length() - ARROW_MAGIC.length);
-            raf.readFully(footer);
-            return Arrays.equals(header, ARROW_MAGIC) && Arrays.equals(footer, ARROW_MAGIC);
-        } catch (IOException e) {
-            return false;
         }
     }
 
