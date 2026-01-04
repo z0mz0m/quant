@@ -114,9 +114,11 @@ public class ArrowSTradeVectorReaderOffHeap {
                             }
 
                             int i = 1;
-                            int loopBound = SPECIES.loopBound(batchSize);
+                            // REMOVED: int loopBound = SPECIES.loopBound(batchSize);
 
-                            for (; i < loopBound; i += SPECIES.length()) {
+                            // The loop condition is changed to be robust.
+                            // It ensures that the 'current' vector can be fully loaded without reading past the end of the batch.
+                            for (; i <= batchSize - SPECIES.length(); i += SPECIES.length()) {
                                 LongVector current = LongVector.fromMemorySegment(SPECIES, segment, (long)i * Long.BYTES, ARROW_ORDER);
                                 LongVector previous = LongVector.fromMemorySegment(SPECIES, segment, (long)(i - 1) * Long.BYTES, ARROW_ORDER);
                                 LongVector delta = current.sub(previous);
@@ -125,6 +127,7 @@ public class ArrowSTradeVectorReaderOffHeap {
                                     arrivalTimeDeltas.add(d);
                                 }
                             }
+
 
                             for (; i < batchSize; i++) {
                                 long current = segment.get(ValueLayout.JAVA_LONG.withOrder(ARROW_ORDER), (long)i * Long.BYTES);
@@ -223,8 +226,8 @@ public class ArrowSTradeVectorReaderOffHeap {
     }
 
     public static void main(String[] args) {
-        String arrowFile = "data/cboe/normalized/EURUSD.cboe.ny.trades.clickhouse.nocompression.arrow";
-        int iterations = 50;
+        String arrowFile = "data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.clickhouse.nocompression.arrow";
+        int iterations = 5;
         System.out.println("Running " + iterations + " iterations to measure performance...");
         for (int i = 0; i < iterations; i++) {
             System.out.println("\n--- Iteration " + (i + 1) + " ---");

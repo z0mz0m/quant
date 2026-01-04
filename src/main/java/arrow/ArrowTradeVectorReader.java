@@ -154,6 +154,7 @@ public class ArrowTradeVectorReader {
 
     public static void main(String[] args) {
         String arrowFile = "data/cboe/normalized/EURUSD.cboe.ny.trades.clickhouse.nocompression.arrow";
+        arrowFile = "data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.clickhouse.nocompression.arrow";
         analyzeTrades(arrowFile);
     }
 }

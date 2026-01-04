@@ -79,10 +79,10 @@ public class OffHeapReader {
                         List<ArrowBlock> recordBatches = reader.getRecordBlocks();
                         System.out.println("Processing " + recordBatches.size() + " batches...");
 
-                        long tLoadStart = System.nanoTime();
+
 
                         for (ArrowBlock block : recordBatches) {
-
+                            long tLoadStart = System.nanoTime();
                             if (!reader.loadRecordBatch(block)) {
                                 throw new IOException("Could not load record batch " + block.getOffset());
                             }
@@ -125,10 +125,11 @@ public class OffHeapReader {
                             // Step B: SIMD Loop (Vector API)
                             // We start at index 1 because we need (i) and (i-1)
                             int i = 1;
-                            int loopBound = SPECIES.loopBound(batchSize);
+                            // REMOVED: int loopBound = SPECIES.loopBound(batchSize);
 
-                            // The Vector Loop: reads directly from off-heap memory
-                            for (; i < loopBound; i += SPECIES.length()) {
+                            // The Vector Loop: reads directly from off-heap memory.
+                            // The loop condition is changed to ensure we do not read past the buffer's limit.
+                            for (; i <= batchSize - SPECIES.length(); i += SPECIES.length()) {
                                 long offsetCurr = (long) i * 8L;
                                 long offsetPrev = (long) (i - 1) * 8L;
 
@@ -144,6 +145,7 @@ public class OffHeapReader {
                                 vDelta.intoArray(allDeltas, totalDeltaCount);
                                 totalDeltaCount += SPECIES.length();
                             }
+
 
                             // Step C: Tail Loop (Process remaining items scalar)
                             for (; i < batchSize; i++) {
@@ -243,7 +245,7 @@ public class OffHeapReader {
 
     public static void main(String[] args) {
         // Update path as needed
-        String arrowFile = "data/cboe/normalized/EURUSD.cboe.ny.trades.clickhouse.nocompression.arrow";
+        String arrowFile = "data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.clickhouse.nocompression.arrow";
 
         // Warmup / Performance Test
         int iterations = 5;
