@@ -220,3 +220,33 @@ Performance Breakdown:
 - Parallel Sort:               280.732 ms
 -----------------------------------------
 Total time to read and compute CDF: 1676.428 milliseconds
+
+
+
+# Parallel load of data 
+
+
+sudo chrt -f 99 taskset -c 0-7 java --enable-native-access=ALL-UNNAMED -Xmx4G -Xms4G -XX:+UseParallelGC  -XX:+UseLargePages -XX:+AlwaysPreTouch -XX:MaxDirectMemorySize=12G --enable-preview --add-modules jdk.incubator.vector  --add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED -cp target/quant-1.0-SNAPSHOT.jar arrow.ArrowOffHeapParallelLoad
+
+
+
+--- Iteration 3 ---
+Performance Breakdown:
+- Metadata Scan:       0.317 ms
+- Parallel Read/Calc:  171.627 ms
+- Sorting:             196.587 ms
+- Total Time:          530.247 ms
+-----------------------------------------
+Analysis Results: Inter-Trade Arrival Time CDF
+Total calculated time differences: 95,450,655
+Percentiles (time in milliseconds):
+- 25.0th percentile (0.25): <= 0 ms
+- 50.0th percentile (0.50): <= 0 ms
+- 75.0th percentile (0.75): <= 100 ms
+- 90.0th percentile (0.90): <= 100 ms
+- 95.0th percentile (0.95): <= 137 ms
+- 99.0th percentile (0.99): <= 433 ms
+- 99.9th percentile (1.00): <= 1002 ms
+- 100.0th percentile (1.00): <= 14999 ms
+-----------------------------------------
+
