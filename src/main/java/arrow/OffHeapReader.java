@@ -55,7 +55,7 @@ public class OffHeapReader {
         // Granular metrics
         long totalBatchLoadNanos = 0;
         long totalVectorCalcNanos = 0;
-
+        readingStartTime = System.nanoTime();
         try (RootAllocator allocator = new RootAllocator()) {
             try (RandomAccessFile raf = new RandomAccessFile(arrowFile, "r")) {
                 try (FileChannel fileChannel = raf.getChannel()) {
@@ -63,7 +63,8 @@ public class OffHeapReader {
 
                         System.out.println("Opened Arrow file: " + arrowFilePath);
                         VectorSchemaRoot root = reader.getVectorSchemaRoot();
-                        setupEndTime = System.nanoTime();
+
+
 
                         // --- ZERO-COPY BUFFERING STRATEGY ---
                         // Instead of List<Long> (boxing), we use a raw long[] that grows.
@@ -73,12 +74,15 @@ public class OffHeapReader {
                         long lastTimestamp = -1;
                         long totalTrades = 0;
 
-                        readingStartTime = System.nanoTime();
+                        setupEndTime = System.nanoTime();
+
                         List<ArrowBlock> recordBatches = reader.getRecordBlocks();
                         System.out.println("Processing " + recordBatches.size() + " batches...");
 
+                        long tLoadStart = System.nanoTime();
+
                         for (ArrowBlock block : recordBatches) {
-                            long tLoadStart = System.nanoTime();
+
                             if (!reader.loadRecordBatch(block)) {
                                 throw new IOException("Could not load record batch " + block.getOffset());
                             }

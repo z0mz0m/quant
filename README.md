@@ -77,36 +77,24 @@ also one cannot set the size of record batches inside the arrow
 
 # Note how to run 
 
-
+# several batches processed :
 
 java --add-modules jdk.incubator.vector  --add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED -cp .\target\quant-1.0-SNAPSHOT.jar arrow.OffHeapReader
 
 
-Analysis Results: Inter-Trade Arrival Time CDF
-Total calculated time differences: 118,366
-Percentiles (ms):
--  25.0%: <= 205 ms
--  25.0%: <= 205 ms
--  50.0%: <= 3392 ms
--  75.0%: <= 12590 ms
--  90.0%: <= 33556 ms
--  95.0%: <= 60014 ms
--  99.0%: <= 167033 ms
--  99.9%: <= 519973 ms
-- 100.0%: <= 176483523 ms
------------------------------------------
 Performance Breakdown:
-- Setup & Initialization:          0.598 ms
-- Reading & Calculation (Total):   6.878 ms
-  |-- Disk I/O (Load Batch):       5.056 ms
-  |-- Zero-Copy Vector Calc:       1.511 ms
-  |-- Logic Overhead:              0.311 ms
-- Parallel Sort:                   3.071 ms
+- Setup & Initialization:          5.792 ms
+- Reading & Calculation (Total):  12.328 ms
+  |-- Disk I/O (Load Batch):       8.378 ms
+  |-- Zero-Copy Vector Calc:       1.648 ms
+  |-- Logic Overhead:              2.303 ms
+- Parallel Sort:                   3.478 ms
 -----------------------------------------
-Total Execution Time:               16.453 ms
+Total Execution Time:               16.108 ms
 
 
 
+# one batch :
 
 java  --add-modules jdk.incubator.vector  --add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED -cp .\target\quant-1.0-SNAPSHOT.jar arrows.ArrowSTradeVectorReaderOffHeap
 
