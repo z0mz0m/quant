@@ -1,4 +1,4 @@
-package arrow;
+package arrows;
 
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.BigIntVector;
@@ -18,7 +18,7 @@ import java.util.List;
 /**
  * A utility class to read and analyze trade data from an Arrow file.
  */
-public class ArrowTradeReader {
+public class ArrowSTradeReader {
 
     private static final byte[] ARROW_MAGIC = "ARROW1".getBytes(StandardCharsets.US_ASCII);
 
@@ -168,7 +168,7 @@ public class ArrowTradeReader {
 
     public static void main(String[] args) {
         String arrowFile = "data/cboe/normalized/EURUSD.cboe.ny.trades.arrows";
-        int iterations = 500;
+        int iterations = 5;
         System.out.println("Running " + iterations + " iterations to measure performance...");
         for (int i = 0; i < iterations; i++) {
             System.out.println("\n--- Iteration " + (i + 1) + " ---");

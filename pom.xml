@@ -30,11 +30,6 @@
             <groupId>com.clickhouse</groupId>
             <artifactId>clickhouse-client</artifactId>
             <version>0.9.5</version> </dependency>
-        <dependency>
-            <groupId>com.clickhouse</groupId>
-            <artifactId>clickhouse-http-client</artifactId>
-            <version>0.9.5</version>
-        </dependency>
 
 
 

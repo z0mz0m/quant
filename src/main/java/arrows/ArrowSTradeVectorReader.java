@@ -1,4 +1,4 @@
-package arrow;
+package arrows;
 
 
 
@@ -209,7 +209,7 @@ public class ArrowSTradeVectorReader {
 
     public static void main(String[] args) {
         String arrowFile = "data/cboe/normalized/EURUSD.cboe.ny.trades.arrows";
-        int iterations = 50;
+        int iterations = 5;
         System.out.println("Running " + iterations + " iterations to measure performance...");
         for (int i = 0; i < iterations; i++) {
             System.out.println("\n--- Iteration " + (i + 1) + " ---");
