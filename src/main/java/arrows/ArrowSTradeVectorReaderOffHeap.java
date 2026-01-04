@@ -1,6 +1,7 @@
 package arrows;
 
 import jdk.incubator.vector.LongVector;
+import jdk.incubator.vector.VectorShuffle;
 import jdk.incubator.vector.VectorSpecies;
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.BigIntVector;
@@ -121,8 +122,14 @@ public class ArrowSTradeVectorReaderOffHeap {
                             // It ensures that the 'current' vector can be fully loaded without reading past the end of the batch.
                             for (; i <= batchSize - SPECIES.length(); i += SPECIES.length()) {
                                 LongVector current = LongVector.fromMemorySegment(SPECIES, segment, (long)i * Long.BYTES, ARROW_ORDER);
-                                LongVector previous = LongVector.fromMemorySegment(SPECIES, segment, (long)(i - 1) * Long.BYTES, ARROW_ORDER);
-                                LongVector delta = current.sub(previous);
+
+                                VectorShuffle<Long> slide = VectorShuffle.iota(SPECIES,1,1,true);
+
+                                LongVector prev = current.rearrange(slide);
+
+
+                                //LongVector previous = LongVector.fromMemorySegment(SPECIES, segment, (long)(i - 1) * Long.BYTES, ARROW_ORDER);
+                                LongVector delta = current.sub(prev);
                                 delta.intoArray(deltaChunk, 0);
                                 for (long d : deltaChunk) {
                                     arrivalTimeDeltas.add(d);
