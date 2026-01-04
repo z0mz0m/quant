@@ -250,3 +250,5 @@ Percentiles (time in milliseconds):
 - 100.0th percentile (1.00): <= 14999 ms
 -----------------------------------------
 
+# further things ...
+vmtouch -t -l data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.clickhouse.nocompression.arrow
