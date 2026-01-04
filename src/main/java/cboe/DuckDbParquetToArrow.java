@@ -33,7 +33,7 @@ public class DuckDbParquetToArrow {
         // 3. Save the result to a new file in the Arrow format.
         String sql = String.format(
                 "COPY (" +
-                        "  SELECT * EXCLUDE (timestamp) " +
+                        "  SELECT timestamp_millis_utc, sym, source " +
                         "  FROM read_parquet('%s')" +
                         ") TO '%s' (FORMAT ARROW)",
                 inputParquetPath.replace("\\", "/"),

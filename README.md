@@ -120,3 +120,68 @@ Performance Breakdown:
 -----------------------------------------
 Total time to read and compute CDF: 8.233 milliseconds
 -----------------------------------------
+
+
+# lz4 compressed
+
+Opened Arrow file: data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.clickhouse.lz4.arrow
+Processing 1544 batches...
+Finished reading 95452199 trades.
+-----------------------------------------
+Analysis Results: Inter-Trade Arrival Time CDF
+Total calculated time differences: 95,452,198
+Percentiles (ms):
+-  25.0%: <= 0 ms
+-  50.0%: <= 0 ms
+-  75.0%: <= 100 ms
+-  90.0%: <= 100 ms
+-  95.0%: <= 137 ms
+-  99.0%: <= 433 ms
+-  99.9%: <= 1002 ms
+- 100.0%: <= 38546290 ms
+-----------------------------------------
+this should be zero:2.0E-4
+Performance Breakdown:
+- Setup & Initialization:        323.128 ms
+- Reading & Calculation (Total):114150.903 ms
+  |-- Disk I/O (Load Batch):    113091.275 ms
+  |-- Zero-Copy Vector Calc:     108.776 ms
+  |-- Logic Overhead:            950.852 ms
+- Parallel Sort:                 514.618 ms
+-----------------------------------------
+Total Execution Time:             114667.050 ms
+-----------------------------------------
+
+
+# a lot larger file 95_452_199 rows
+
+
+--- Iteration 5 ---
+Successfully opened Arrow stream file: data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.clickhouse.nocompression.arrow
+Schema: Schema<timestamp_millis_utc: Int(64, true), sym: Utf8, source: Utf8>
+-----------------------------------------
+Calculating inter-trade arrival times using Vector API and Off-Heap Memory...
+Finished reading 95452199 trades.
+-----------------------------------------
+Analysis Results: Inter-Trade Arrival Time CDF
+Total calculated time differences: 95,452,198
+Percentiles (time in milliseconds):
+- 25.0th percentile (0.25): <= 0 ms
+- 50.0th percentile (0.50): <= 0 ms
+- 75.0th percentile (0.75): <= 100 ms
+- 90.0th percentile (0.90): <= 100 ms
+- 95.0th percentile (0.95): <= 137 ms
+- 99.0th percentile (0.99): <= 433 ms
+- 99.9th percentile (1.00): <= 1002 ms
+- 100.0th percentile (1.00): <= 54174465 ms
+-----------------------------------------
+Performance Breakdown:
+- Setup & Initialization:      0.953 ms
+- Reading & Delta Calculation: 3962.109 ms
+  - I/O (Loading Batches):     2991.581 ms
+  - Off-Heap Segment Setup:    0.481 ms
+  - Vector API Delta Calc:     968.383 ms
+- List to Array Conversion:    264.262 ms
+- Parallel Sort:               297.129 ms
+-----------------------------------------
+Total time to read and compute CDF: 4524.861 milliseconds

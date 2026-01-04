@@ -10,6 +10,7 @@ import org.apache.arrow.vector.ipc.ArrowFileReader;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.foreign.MemorySegment;
@@ -65,11 +66,11 @@ public class ArrowSTradeVectorReaderOffHeap {
         long totalEndTime;
 
         try (RootAllocator allocator = new RootAllocator()) {
-            try (RandomAccessFile raf = new RandomAccessFile(arrowFile, "r")) {
-                try (FileChannel fileChannel = raf.getChannel()) {
-                    try (ArrowFileReader reader = new ArrowFileReader(fileChannel, allocator)) {
+            try (FileInputStream fileInputStream = new FileInputStream(arrowFile);
+                 ArrowStreamReader reader = new ArrowStreamReader(fileInputStream, allocator)) {
 
-                        System.out.println("Successfully opened Arrow stream file: " + arrowFilePath);
+
+                System.out.println("Successfully opened Arrow stream file: " + arrowFilePath);
                         VectorSchemaRoot root = reader.getVectorSchemaRoot();
                         System.out.println("Schema: " + root.getSchema());
                         System.out.println("-----------------------------------------");
@@ -167,8 +168,6 @@ public class ArrowSTradeVectorReaderOffHeap {
                         printPerformanceSummary(totalStartTime, setupEndTime, readingStartTime, readingEndTime, conversionStartTime, conversionEndTime, sortStartTime, sortEndTime, totalEndTime, totalBatchLoadNanos, totalSegmentSetupNanos, totalVectorCalcNanos);
 
                     }
-                }
-            }
         } catch (IOException e) {
             System.err.println("An error occurred while reading the Arrow file.");
             e.printStackTrace();
@@ -227,6 +226,7 @@ public class ArrowSTradeVectorReaderOffHeap {
 
     public static void main(String[] args) {
         String arrowFile = "data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.clickhouse.nocompression.arrow";
+        arrowFile = "data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.arrows";
         int iterations = 5;
         System.out.println("Running " + iterations + " iterations to measure performance...");
         for (int i = 0; i < iterations; i++) {

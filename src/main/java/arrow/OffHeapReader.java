@@ -246,7 +246,7 @@ public class OffHeapReader {
     public static void main(String[] args) {
         // Update path as needed
         String arrowFile = "data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.clickhouse.nocompression.arrow";
-
+        arrowFile = "data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.clickhouse.lz4.arrow";
         // Warmup / Performance Test
         int iterations = 5;
         System.out.println("Running " + iterations + " iterations to measure performance...");
