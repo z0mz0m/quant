@@ -185,3 +185,38 @@ Performance Breakdown:
 - Parallel Sort:               297.129 ms
 -----------------------------------------
 Total time to read and compute CDF: 4524.861 milliseconds
+
+
+# WSL2 setup
+
+sudo nice -n -20 java --enable-native-access=ALL-UNNAMED -Xmx4G -Xms4G -XX:+UseParallelGC  -XX:+UseLargePages -XX:+AlwaysPreTouch -XX:MaxDirectMemorySize=12G --enable-preview --add-modules jdk.incubator.vector  --add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED -cp target/quant-1.0-SNAPSHOT.jar arrows.ArrowsOffHeap
+
+
+Successfully opened Arrow stream file: data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.arrows
+Schema: Schema<timestamp_millis_utc: Int(64, true), sym: Utf8, source: Utf8>
+-----------------------------------------
+Calculating inter-trade arrival times using Vector API and Off-Heap Memory...
+Finished reading 95452199 trades.
+-----------------------------------------
+Analysis Results: Inter-Trade Arrival Time CDF
+Total calculated time differences: 95,451,427
+Percentiles (time in milliseconds):
+- 25.0th percentile (0.25): <= 0 ms
+- 50.0th percentile (0.50): <= 0 ms
+- 75.0th percentile (0.75): <= 0 ms
+- 90.0th percentile (0.90): <= 100 ms
+- 95.0th percentile (0.95): <= 105 ms
+- 99.0th percentile (0.99): <= 374 ms
+- 99.9th percentile (1.00): <= 1001 ms
+- 100.0th percentile (1.00): <= 79199994 ms
+-----------------------------------------
+Performance Breakdown:
+- Setup & Initialization:      337.238 ms
+- Reading & Delta Calculation: 884.961 ms
+  - I/O (Loading Batches):     756.292 ms
+  - Off-Heap Segment Setup:    0.372 ms
+  - Vector API Delta Calc:     127.126 ms
+- List to Array Conversion:    173.403 ms
+- Parallel Sort:               280.732 ms
+-----------------------------------------
+Total time to read and compute CDF: 1676.428 milliseconds
