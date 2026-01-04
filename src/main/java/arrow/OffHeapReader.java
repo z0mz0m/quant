@@ -163,13 +163,14 @@ public class OffHeapReader {
                             return;
                         }
 
+                        sortStartTime = System.nanoTime();
                         // Trim array to exact size before sorting
                         // (This replaces the expensive Stream/Map/Conversion phase)
                         long[] finalDeltas = (allDeltas.length == totalDeltaCount)
                                 ? allDeltas
                                 : Arrays.copyOf(allDeltas, totalDeltaCount);
 
-                        sortStartTime = System.nanoTime();
+
                         Arrays.parallelSort(finalDeltas);
                         sortEndTime = System.nanoTime();
 
@@ -207,7 +208,7 @@ public class OffHeapReader {
         double readingDuration = (readingEndTime - readingStartTime) / 1_000_000.0;
         double sortDuration = (sortEndTime - sortStartTime) / 1_000_000.0;
         double totalDuration = (totalEndTime - totalStartTime) / 1_000_000.0;
-
+        System.out.println("this should be zero:" +(totalEndTime - sortEndTime) / 1_000_000.0);
         double batchLoadMillis = totalBatchLoadNanos / 1_000_000.0;
         double vectorCalcMillis = totalVectorCalcNanos / 1_000_000.0;
         // The overhead is what's left after loading and calc (e.g. array resizing, object overhead)

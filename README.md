@@ -74,3 +74,61 @@ https://clickhouse.com/docs/interfaces/formats/Arrow
 Note on defaults, including usage of LD4 as default
 also one cannot set the size of record batches inside the arrow 
 
+
+# Note how to run 
+
+
+
+java --add-modules jdk.incubator.vector  --add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED -cp .\target\quant-1.0-SNAPSHOT.jar arrow.OffHeapReader
+
+
+Analysis Results: Inter-Trade Arrival Time CDF
+Total calculated time differences: 118,366
+Percentiles (ms):
+-  25.0%: <= 205 ms
+-  25.0%: <= 205 ms
+-  50.0%: <= 3392 ms
+-  75.0%: <= 12590 ms
+-  90.0%: <= 33556 ms
+-  95.0%: <= 60014 ms
+-  99.0%: <= 167033 ms
+-  99.9%: <= 519973 ms
+- 100.0%: <= 176483523 ms
+-----------------------------------------
+Performance Breakdown:
+- Setup & Initialization:          0.598 ms
+- Reading & Calculation (Total):   6.878 ms
+  |-- Disk I/O (Load Batch):       5.056 ms
+  |-- Zero-Copy Vector Calc:       1.511 ms
+  |-- Logic Overhead:              0.311 ms
+- Parallel Sort:                   3.071 ms
+-----------------------------------------
+Total Execution Time:               16.453 ms
+
+
+
+
+java  --add-modules jdk.incubator.vector  --add-opens=java.base/java.nio=org.apache.arrow.memory.core,ALL-UNNAMED -cp .\target\quant-1.0-SNAPSHOT.jar arrows.ArrowSTradeVectorReaderOffHeap
+
+
+Percentiles (time in milliseconds):
+- 25.0th percentile (0.25): <= 205 ms
+- 50.0th percentile (0.50): <= 3392 ms
+- 75.0th percentile (0.75): <= 12590 ms
+- 90.0th percentile (0.90): <= 33556 ms
+- 95.0th percentile (0.95): <= 60014 ms
+- 99.0th percentile (0.99): <= 167033 ms
+- 99.9th percentile (1.00): <= 519973 ms
+- 100.0th percentile (1.00): <= 176483523 ms
+-----------------------------------------
+Performance Breakdown:
+- Setup & Initialization:      0.517 ms
+- Reading & Delta Calculation: 5.640 ms
+  - I/O (Loading Batches):     3.912 ms
+  - Off-Heap Segment Setup:    0.017 ms
+  - Vector API Delta Calc:     1.675 ms
+- List to Array Conversion:    0.437 ms
+- Parallel Sort:               1.504 ms
+-----------------------------------------
+Total time to read and compute CDF: 8.233 milliseconds
+-----------------------------------------
