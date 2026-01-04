@@ -122,12 +122,8 @@ public class ArrowSTradeVectorReaderOffHeap {
                             // It ensures that the 'current' vector can be fully loaded without reading past the end of the batch.
                             for (; i <= batchSize - SPECIES.length(); i += SPECIES.length()) {
                                 LongVector current = LongVector.fromMemorySegment(SPECIES, segment, (long)i * Long.BYTES, ARROW_ORDER);
-
                                 VectorShuffle<Long> slide = VectorShuffle.iota(SPECIES,1,1,true);
-
                                 LongVector prev = current.rearrange(slide);
-
-
                                 //LongVector previous = LongVector.fromMemorySegment(SPECIES, segment, (long)(i - 1) * Long.BYTES, ARROW_ORDER);
                                 LongVector delta = current.sub(prev);
                                 delta.intoArray(deltaChunk, 0);
@@ -232,13 +228,13 @@ public class ArrowSTradeVectorReaderOffHeap {
     }
 
     public static void main(String[] args) {
-        String arrowFile = "data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.clickhouse.nocompression.arrow";
-        arrowFile = "data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.arrows";
+        String arrowsFile ;
+        arrowsFile = "data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.arrows";
         int iterations = 5;
         System.out.println("Running " + iterations + " iterations to measure performance...");
         for (int i = 0; i < iterations; i++) {
             System.out.println("\n--- Iteration " + (i + 1) + " ---");
-            analyzeTrades(arrowFile);
+            analyzeTrades(arrowsFile);
         }
     }
 }
