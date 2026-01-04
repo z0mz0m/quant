@@ -12,6 +12,8 @@ import org.apache.arrow.vector.ipc.message.ArrowBlock;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -94,7 +96,9 @@ public class ImprovedReader {
 
                             long[] batchTimestamps = new long[batchSize];
                             t1 = System.nanoTime();
-                            timestampVector.getDataBuffer().nioBuffer(0, batchSize * Long.BYTES).asLongBuffer().get(batchTimestamps, 0, batchSize);
+                            ByteBuffer byteBuffer = timestampVector.getDataBuffer().nioBuffer(0, batchSize * Long.BYTES);
+                            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+                            byteBuffer.asLongBuffer().get(batchTimestamps, 0, batchSize);
                             t2 = System.nanoTime();
                             totalMemCopyNanos += (t2 - t1);
 
@@ -212,7 +216,7 @@ public class ImprovedReader {
 
     public static void main(String[] args) {
         String arrowFile = "data/cboe/normalized/EURUSD.cboe.ny.trades.clickhouse.nocompression.arrow";
-        int iterations = 5;
+        int iterations = 50;
         System.out.println("Running " + iterations + " iterations to measure performance...");
         for (int i = 0; i < iterations; i++) {
             System.out.println("\n--- Iteration " + (i + 1) + " ---");

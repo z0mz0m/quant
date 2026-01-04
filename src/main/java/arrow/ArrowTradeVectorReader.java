@@ -153,7 +153,7 @@ public class ArrowTradeVectorReader {
     }
 
     public static void main(String[] args) {
-        String arrowFile = "data/cboe/normalized/EURUSD.cboe.ny.trades.clickhouse.arrow";
+        String arrowFile = "data/cboe/normalized/EURUSD.cboe.ny.trades.clickhouse.nocompression.arrow";
         analyzeTrades(arrowFile);
     }
 }

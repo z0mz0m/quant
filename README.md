@@ -67,3 +67,10 @@ https://github.com/paleolimbot/duckdb-nanoarrow?tab=readme-ov-file
 
 Arrow IPC files (.arrow) and Arrow IPC streams (.arrows) are distinct but related formats. This extension can read both but only writes Arrow IPC Streams.
 
+# Note on clickhouse arrow/arrows 
+
+https://clickhouse.com/docs/interfaces/formats/Arrow
+
+Note on defaults, including usage of LD4 as default
+also one cannot set the size of record batches inside the arrow 
+
