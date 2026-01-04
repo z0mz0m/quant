@@ -28,8 +28,7 @@ public class ArrowTradeReader {
      * @param arrowFilePath The path to the Arrow file.
      */
     public static void analyzeTrades(String arrowFilePath) {
-        long startTime = System.nanoTime(); // Start the timer
-
+        long totalStartTime = System.nanoTime(); // Start the overall timer
 
         File arrowFile = new File(arrowFilePath);
         if (!arrowFile.exists()) {
@@ -41,6 +40,13 @@ public class ArrowTradeReader {
             System.err.println("Warning: File may not be a valid Arrow IPC file (magic number mismatch).");
         }
 
+        long setupEndTime;
+        long readingStartTime;
+        long readingEndTime;
+        long sortStartTime;
+        long sortEndTime;
+        long totalEndTime;
+
         try (RootAllocator allocator = new RootAllocator();
              FileInputStream fileInputStream = new FileInputStream(arrowFile);
              ArrowStreamReader reader = new ArrowStreamReader(fileInputStream, allocator)) {
@@ -51,13 +57,15 @@ public class ArrowTradeReader {
             System.out.println("-----------------------------------------");
             System.out.println("Calculating inter-trade arrival times...");
 
+            setupEndTime = System.nanoTime(); // End setup time after reader is initialized
+
             List<Long> arrivalTimeDeltas = new ArrayList<>();
             long lastTimestamp = -1;
             long totalTrades = 0;
 
+            readingStartTime = System.nanoTime();
             while (reader.loadNextBatch()) {
                 int batchSize = root.getRowCount();
-                System.out.printf("Loaded batch of %d trades.%n", batchSize);
                 BigIntVector timestampVector = (BigIntVector) root.getVector("timestamp_millis_utc");
 
                 for (int i = 0; i < batchSize; i++) {
@@ -70,6 +78,7 @@ public class ArrowTradeReader {
                 }
                 totalTrades += batchSize;
             }
+            readingEndTime = System.nanoTime();
 
             System.out.println("Finished reading " + totalTrades + " trades.");
             System.out.println("-----------------------------------------");
@@ -79,18 +88,14 @@ public class ArrowTradeReader {
                 return;
             }
 
-            // Sort the deltas to calculate the CDF
+            sortStartTime = System.nanoTime();
             Collections.sort(arrivalTimeDeltas);
+            sortEndTime = System.nanoTime();
 
-            long endTime = System.nanoTime(); // End the timer after computation
-            double durationMillis = (endTime - startTime) / 1_000_000.0;
-
+            totalEndTime = System.nanoTime();
 
             printCdfSummary(arrivalTimeDeltas);
-
-            System.out.printf("Total time to read and compute CDF: %.3f milliseconds%n", durationMillis);
-            System.out.println("-----------------------------------------");
-
+            printPerformanceSummary(totalStartTime, setupEndTime, readingStartTime, readingEndTime, sortStartTime, sortEndTime, totalEndTime);
 
         } catch (IOException e) {
             System.err.println("An error occurred while reading the Arrow file.");
@@ -98,6 +103,21 @@ public class ArrowTradeReader {
         } catch (Exception e) {
             handleProcessingException(e);
         }
+    }
+
+    private static void printPerformanceSummary(long totalStartTime, long setupEndTime, long readingStartTime, long readingEndTime, long sortStartTime, long sortEndTime, long totalEndTime) {
+        double setupDuration = (setupEndTime - totalStartTime) / 1_000_000.0;
+        double readingDuration = (readingEndTime - readingStartTime) / 1_000_000.0;
+        double sortDuration = (sortEndTime - sortStartTime) / 1_000_000.0;
+        double totalDuration = (totalEndTime - totalStartTime) / 1_000_000.0;
+
+        System.out.println("Performance Breakdown:");
+        System.out.printf("  - Setup & Initialization:      %.3f ms%n", setupDuration);
+        System.out.printf("  - Reading & Delta Calculation: %.3f ms%n", readingDuration);
+        System.out.printf("  - List Sort:                   %.3f ms%n", sortDuration);
+        System.out.println("-----------------------------------------");
+        System.out.printf("Total time to read and compute CDF: %.3f milliseconds%n", totalDuration);
+        System.out.println("-----------------------------------------");
     }
 
     /**
@@ -148,6 +168,11 @@ public class ArrowTradeReader {
 
     public static void main(String[] args) {
         String arrowFile = "data/cboe/normalized/EURUSD.cboe.ny.trades.arrows";
-        analyzeTrades(arrowFile);
+        int iterations = 500;
+        System.out.println("Running " + iterations + " iterations to measure performance...");
+        for (int i = 0; i < iterations; i++) {
+            System.out.println("\n--- Iteration " + (i + 1) + " ---");
+            analyzeTrades(arrowFile);
+        }
     }
 }

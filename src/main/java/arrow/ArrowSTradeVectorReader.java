@@ -8,13 +8,11 @@ import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
-import org.apache.arrow.vector.ipc.SeekableReadChannel;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
-import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -35,7 +33,7 @@ public class ArrowSTradeVectorReader {
      * @param arrowFilePath The path to the Arrow stream file.
      */
     public static void analyzeTrades(String arrowFilePath) {
-        long startTime = System.nanoTime(); // Start the timer
+        long totalStartTime = System.nanoTime(); // Start the overall timer
 
         File arrowFile = new File(arrowFilePath);
         if (!arrowFile.exists()) {
@@ -43,8 +41,15 @@ public class ArrowSTradeVectorReader {
             return;
         }
 
-        // Use RandomAccessFile to get a FileChannel, which is then used by the ArrowStreamReader.
-        // This is suitable for memory-mapped-like I/O with the stream format.
+        long setupEndTime;
+        long readingStartTime;
+        long readingEndTime;
+        long conversionStartTime;
+        long conversionEndTime;
+        long sortStartTime;
+        long sortEndTime;
+        long totalEndTime;
+
         try (RootAllocator allocator = new RootAllocator()) {
             try (RandomAccessFile raf = new RandomAccessFile(arrowFile, "r")) {
                 try (FileChannel fileChannel = raf.getChannel()) {
@@ -56,24 +61,40 @@ public class ArrowSTradeVectorReader {
                         System.out.println("-----------------------------------------");
                         System.out.println("Calculating inter-trade arrival times using Vector API...");
 
+                        setupEndTime = System.nanoTime();
+
                         List<Long> arrivalTimeDeltas = new ArrayList<>();
                         long lastTimestamp = -1;
                         long totalTrades = 0;
 
                         long[] deltaChunk = new long[SPECIES.length()];
 
+                        // Add accumulators for more granular timing
+                        long totalBatchLoadNanos = 0;
+                        long totalMemCopyNanos = 0;
+                        long totalVectorCalcNanos = 0;
+                        long t1, t2;
+
+
+                        readingStartTime = System.nanoTime();
+                        long batchReadStart = System.nanoTime();
                         while (reader.loadNextBatch()) {
+                            totalBatchLoadNanos += (System.nanoTime() - batchReadStart);
+
                             int batchSize = root.getRowCount();
                             if (batchSize == 0) continue;
 
-                            System.out.printf("Loaded batch of %d trades.%n", batchSize);
                             BigIntVector timestampVector = (BigIntVector) root.getVector("timestamp_millis_utc");
 
                             long[] batchTimestamps = new long[batchSize];
-                            for (int i = 0; i < batchSize; i++) {
-                                batchTimestamps[i] = timestampVector.get(i);
-                            }
 
+                            t1 = System.nanoTime();
+                            java.nio.LongBuffer longBuffer = timestampVector.getDataBuffer().nioBuffer(0, batchSize * Long.BYTES).asLongBuffer();
+                            longBuffer.get(batchTimestamps, 0, batchSize);
+                            t2 = System.nanoTime();
+                            totalMemCopyNanos += (t2 - t1);
+
+                            t1 = System.nanoTime();
                             if (lastTimestamp != -1) {
                                 arrivalTimeDeltas.add(batchTimestamps[0] - lastTimestamp);
                             }
@@ -95,10 +116,15 @@ public class ArrowSTradeVectorReader {
                                 long delta = batchTimestamps[i] - batchTimestamps[i - 1];
                                 arrivalTimeDeltas.add(delta);
                             }
+                            t2 = System.nanoTime();
+                            totalVectorCalcNanos += (t2 - t1);
+
 
                             lastTimestamp = batchTimestamps[batchSize - 1];
                             totalTrades += batchSize;
+                            batchReadStart = System.nanoTime();
                         }
+                        readingEndTime = System.nanoTime();
 
                         System.out.println("Finished reading " + totalTrades + " trades.");
                         System.out.println("-----------------------------------------");
@@ -108,16 +134,18 @@ public class ArrowSTradeVectorReader {
                             return;
                         }
 
+                        conversionStartTime = System.nanoTime();
                         long[] deltasArray = arrivalTimeDeltas.stream().mapToLong(Long::longValue).toArray();
-                        Arrays.parallelSort(deltasArray);
+                        conversionEndTime = System.nanoTime();
 
-                        long endTime = System.nanoTime(); // End the timer after computation
-                        double durationMillis = (endTime - startTime) / 1_000_000.0;
+                        sortStartTime = System.nanoTime();
+                        Arrays.parallelSort(deltasArray);
+                        sortEndTime = System.nanoTime();
+
+                        totalEndTime = System.nanoTime();
 
                         printCdfSummary(deltasArray);
-
-                        System.out.printf("Total time to read and compute CDF: %.3f milliseconds%n", durationMillis);
-                        System.out.println("-----------------------------------------");
+                        printPerformanceSummary(totalStartTime, setupEndTime, readingStartTime, readingEndTime, conversionStartTime, conversionEndTime, sortStartTime, sortEndTime, totalEndTime, totalBatchLoadNanos, totalMemCopyNanos, totalVectorCalcNanos);
 
                     }
                 }
@@ -145,6 +173,30 @@ public class ArrowSTradeVectorReader {
         System.out.println("-----------------------------------------");
     }
 
+    private static void printPerformanceSummary(long totalStartTime, long setupEndTime, long readingStartTime, long readingEndTime, long conversionStartTime, long conversionEndTime, long sortStartTime, long sortEndTime, long totalEndTime, long totalBatchLoadNanos, long totalMemCopyNanos, long totalVectorCalcNanos) {
+        double setupDuration = (setupEndTime - totalStartTime) / 1_000_000.0;
+        double readingDuration = (readingEndTime - readingStartTime) / 1_000_000.0;
+        double conversionDuration = (conversionEndTime - conversionStartTime) / 1_000_000.0;
+        double sortDuration = (sortEndTime - sortStartTime) / 1_000_000.0;
+        double totalDuration = (totalEndTime - totalStartTime) / 1_000_000.0;
+        double batchLoadMillis = totalBatchLoadNanos / 1_000_000.0;
+        double memCopyMillis = totalMemCopyNanos / 1_000_000.0;
+        double vectorCalcMillis = totalVectorCalcNanos / 1_000_000.0;
+
+
+        System.out.println("Performance Breakdown:");
+        System.out.printf("  - Setup & Initialization:      %.3f ms%n", setupDuration);
+        System.out.printf("  - Reading & Delta Calculation: %.3f ms%n", readingDuration);
+        System.out.printf("    - I/O (Loading Batches):     %.3f ms%n", batchLoadMillis);
+        System.out.printf("    - Arrow to long[] Copy:      %.3f ms%n", memCopyMillis);
+        System.out.printf("    - Vector API Delta Calc:     %.3f ms%n", vectorCalcMillis);
+        System.out.printf("  - List to Array Conversion:    %.3f ms%n", conversionDuration);
+        System.out.printf("  - Parallel Sort:               %.3f ms%n", sortDuration);
+        System.out.println("-----------------------------------------");
+        System.out.printf("Total time to read and compute CDF: %.3f milliseconds%n", totalDuration);
+        System.out.println("-----------------------------------------");
+    }
+
     private static void handleProcessingException(Exception e) {
         if (e.getMessage() != null && e.getMessage().contains("arrow-compression")) {
             System.err.println("\nERROR: Missing Compression Library. Add 'org.apache.arrow:arrow-compression' to your pom.xml.");
@@ -157,6 +209,11 @@ public class ArrowSTradeVectorReader {
 
     public static void main(String[] args) {
         String arrowFile = "data/cboe/normalized/EURUSD.cboe.ny.trades.arrows";
-        analyzeTrades(arrowFile);
+        int iterations = 50;
+        System.out.println("Running " + iterations + " iterations to measure performance...");
+        for (int i = 0; i < iterations; i++) {
+            System.out.println("\n--- Iteration " + (i + 1) + " ---");
+            analyzeTrades(arrowFile);
+        }
     }
 }
