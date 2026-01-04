@@ -251,4 +251,4 @@ Percentiles (time in milliseconds):
 -----------------------------------------
 
 # further things ...
-vmtouch -t -l data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.clickhouse.nocompression.arrow
+vmtouch -v -t  data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.clickhouse.nocompression.arrow
