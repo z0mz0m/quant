@@ -250,5 +250,28 @@ Percentiles (time in milliseconds):
 - 100.0th percentile (1.00): <= 14999 ms
 -----------------------------------------
 
+
+--- Iteration 2 ---
+Performance Breakdown:
+- Metadata Scan:       0.545 ms
+- Parallel Read/Calc:  197.496 ms
+- Sorting:             159.128 ms
+- Total Time:          514.494 ms
+-----------------------------------------
+Analysis Results: Inter-Trade Arrival Time CDF
+Total calculated time differences: 95,450,655
+Percentiles (time in milliseconds):
+- 25.0th percentile (0.25): <= 0 ms
+- 50.0th percentile (0.50): <= 0 ms
+- 75.0th percentile (0.75): <= 100 ms
+- 90.0th percentile (0.90): <= 100 ms
+- 95.0th percentile (0.95): <= 137 ms
+- 99.0th percentile (0.99): <= 433 ms
+- 99.9th percentile (1.00): <= 1002 ms
+- 100.0th percentile (1.00): <= 14999 ms
+-----------------------------------------
+
+
+
 # further things ...
 vmtouch -v -t  data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.clickhouse.nocompression.arrow

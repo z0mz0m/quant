@@ -114,7 +114,8 @@ public class ArrowOffHeapParallelLoad {
             int validCount = (int) (totalBytesWritten / 8);
 
             sortStart = System.nanoTime();
-            Arrays.parallelSort(reusableBuffer, 0, validCount);
+            //Arrays.parallelSort(reusableBuffer, 0, validCount);
+            HybridSorter.sort(reusableBuffer,validCount);
             sortEnd = System.nanoTime();
 
             printPerformanceSummary(totalStartTime, ioSetupStart, ioSetupEnd, parallelReadStart, parallelReadEnd, sortStart, sortEnd);
@@ -167,7 +168,7 @@ public class ArrowOffHeapParallelLoad {
         }
     }
 
-    // ... [Reuse your existing printCdfSummary and main methods] ...
+
 
     private static void printPerformanceSummary(long start, long ioStart, long ioEnd, long readStart, long readEnd, long sortStart, long sortEnd) {
         System.out.println("Performance Breakdown:");
