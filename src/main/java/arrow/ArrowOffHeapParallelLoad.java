@@ -181,7 +181,7 @@ public class ArrowOffHeapParallelLoad {
 
     // Quick Main for copy-paste
     public static void main(String[] args) {
-        String arrowsFile = "data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.clickhouse.nocompression.arrow";
+        String arrowsFile = "data/lob.clickhouse.nocompression.arrow";
         long[] reusableBuffer = new long[100_000_000];
 
         for (int i = 0; i < 5; i++) {
