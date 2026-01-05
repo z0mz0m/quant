@@ -25,7 +25,7 @@ public class ParquetToArrow {
 
         // 2. Construct the SQL Query
         // Syntax: SELECT * FROM file('<path>', Parquet)
-        String query = String.format("SELECT timestamp_millis_utc, sub_ms_idx, scaled_tx_px, tx_sz, tx_agg_side, sym, source FROM file('%s', Parquet)", inputParquetPath);
+        String query = String.format("SELECT timestamp_millis_utc  FROM file('%s', Parquet)", inputParquetPath);
 
         // 3. Build the Command
         // Equivalent terminal command:
@@ -79,8 +79,8 @@ public class ParquetToArrow {
         String binary = "clickhouse-local";
 
         // B: Your file paths
-        String sourceFile = "EURUSD.cboe.ny.trades.parquet";
-        String destFile = "EURUSD.cboe.ny.trades.clickhouse.nocompression.arrow";
+        String sourceFile = "data/lob.parquet";
+        String destFile = "data/lob.clickhouse.nocompression.arrow";
 
         // Create a dummy parquet file for testing if it doesn't exist?
         // (You normally provide your own, but this ensures the code doesn't crash immediately)
