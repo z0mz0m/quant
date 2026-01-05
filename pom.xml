@@ -9,8 +9,8 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <duckdb.jdbc.version>1.4.3.0</duckdb.jdbc.version>
         <arrow.version>18.3.0</arrow.version>
@@ -72,8 +72,8 @@
                         <arg>jdk.incubator.vector</arg>
                         <arg>--enable-preview</arg>
                     </compilerArgs>
-                    <source>25</source>
-                    <target>25</target>
+                    <source>21</source>
+                    <target>21</target>
                 </configuration>
             </plugin>
             <plugin>

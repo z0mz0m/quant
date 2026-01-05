@@ -122,7 +122,7 @@ Total time to read and compute CDF: 8.233 milliseconds
 -----------------------------------------
 
 
-# lz4 compressed
+# LARGE FILE : lz4 compressed
 
 Opened Arrow file: data/cboe/normalized/EDF_OUTPUT_NY_20251205.threesixtyt.lob.clickhouse.lz4.arrow
 Processing 1544 batches...
@@ -153,7 +153,7 @@ Total Execution Time:             114667.050 ms
 -----------------------------------------
 
 
-# a lot larger file 95_452_199 rows
+# A lot larger file 95_452_199 rows
 
 
 --- Iteration 5 ---
